@@ -1,0 +1,3 @@
+This project allows the Arduino to communicate with a Java application launched via the web using JNLP (aka JaWS, or Java Web Start).  It uses the RxTx library. Thanks to the folks at rxtx.qbang.org for providing this library.
+
+

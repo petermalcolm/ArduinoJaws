@@ -172,24 +172,27 @@ public class Arduscoplet implements SerialPortEventListener{
             case SerialPortEvent.PE : eventType = "parity error"; break;
             case SerialPortEvent.RI : eventType = "ring indicator"; break;
         }
-        p.showMessage("got something... " + eventType);
+        // p.showMessage("got something... " + eventType);
         if (oEvent.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
-                try {
-                        int available = in.available();
-                        byte chunk[] = new byte[available];
-                        in.read(chunk, 0, available);
+            try {
+                    int available = in.available();
+                    byte chunk[] = new byte[available];
+                    in.read(chunk, 0, available);
 
-                        // Displayed results are codepage dependent
-                        // System.out.print(new String(chunk)); //  print this (PM)
+                    // Displayed results are codepage dependent
+                    // System.out.print(new String(chunk)); //  print this (PM)
 
-                        System.out.print(Integer.toHexString(0xFFFF & chunk[0])); //  print this (PM)
-                        System.out.print(" ");                          //  print this (PM)
-                        
-                        p.showDataMessage(Integer.toHexString(0xFFFF & chunk[0]));
+                    System.out.print(Integer.toHexString(0xFF & chunk[0])); //  print this (PM) - stupid mistake, was 0xFFFF
+                    System.out.print(" ");                                  //  print this (PM)
 
-                } catch (Exception e) {
-                        System.err.println(e.toString());
-                }
+                    // p.showDataMessage(Integer.toHexString(0xFF & chunk[0])); // ANDing ruins the data (!?)
+                    // p.showDataMessage(Integer.toHexString(chunk[0]));
+                    p.setCurrentYPos((int)chunk[0]);
+                    p.quickRepaint();
+
+            } catch (Exception e) {
+                    System.err.println(e.toString());
+            }
         } else {
             System.out.println("Received unknown Serial Event Type ...");
         }
@@ -209,10 +212,19 @@ class MyPanel extends JPanel {
     private String dataMessage = "";
     private Color currentColor = Color.BLACK;
     
+    private Boolean isDataRepaint = false;
+    private int currentXPos = 0;
+    private int currentYPos = 0;
+    private int formerYPos = 0;
+    
+    private final int PANEL_WIDTH = 450;
+    private final int SCOPE_HEIGHT = 256;
+    private final int SCOPE_OFFSET = 80;
+    
     public MyPanel() {
 
         setBorder(BorderFactory.createLineBorder(Color.black));
-
+        // setBackground(Color.WHITE);
         /*
         addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
@@ -230,6 +242,15 @@ class MyPanel extends JPanel {
         
     }
     
+    public void setIsDataRepaint(Boolean newIsDataRepaint){
+        isDataRepaint = newIsDataRepaint;
+    }
+    
+    public void setCurrentYPos(int newCurrentYPos){
+        formerYPos = currentYPos;
+        currentYPos = newCurrentYPos;
+    }
+    
     private void moveSquare(int x, int y) {
         int OFFSET = 1;
         if ((squareX!=x) || (squareY!=y)) {
@@ -242,7 +263,7 @@ class MyPanel extends JPanel {
     
 
     public Dimension getPreferredSize() {
-        return new Dimension(450,400);
+        return new Dimension(PANEL_WIDTH, SCOPE_HEIGHT+SCOPE_OFFSET);
     }
     
     public void showMessage(String inMessage){
@@ -262,20 +283,35 @@ class MyPanel extends JPanel {
         }
     }
     
+    public void quickRepaint(){
+        isDataRepaint = true;
+        repaint(currentXPos, SCOPE_OFFSET, currentXPos, SCOPE_OFFSET+SCOPE_HEIGHT);
+        // repaint();
+        currentXPos++;
+        if(currentXPos > PANEL_WIDTH) {                                         // wrap to far-left again
+            currentXPos = 0;
+        }
+             
+    }
+    
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);       
-        g.drawString("Arduino Oscilloscope, by MakeToLearn",10,20);
-        g.drawString(message, 10, 38);
-        g.drawString(dataMessage, 10, 56);
-        // g.setColor(Color.RED);
-        // g.fillRect(squareX,squareY,squareW,squareH);
-        g.setColor(Color.BLACK);
-        //g.drawRect(squareX,squareY,squareW,squareH);
-        g.drawLine(0,420/2,450,420/2);
-        
-        g.setColor(currentColor);
-        g.drawString(message, 10, 38);
-        g.drawString(dataMessage, 10, 56);
+        super.paintComponent(g);
+        if(!isDataRepaint) {                                                    // initially, this is *not* a repaint
+            g.drawString("Arduino Oscilloscope, by MakeToLearn",10,20);
+            g.drawString(message, 10, 38);
+            g.drawString(dataMessage, 10, 56);
+            // g.setColor(Color.RED);
+            // g.fillRect(squareX,squareY,squareW,squareH);
+            g.setColor(Color.BLACK);
+            //g.drawRect(squareX,squareY,squareW,squareH);
+            g.drawLine(0, (SCOPE_HEIGHT/2+SCOPE_OFFSET), PANEL_WIDTH, (SCOPE_HEIGHT/2+SCOPE_OFFSET));
+        } else {                                                                // now this *is* a repaint
+            g.setColor(Color.WHITE);                                             // wash out the previous data ...
+            // g.drawLine(currentXPos, SCOPE_OFFSET, currentXPos, SCOPE_OFFSET+SCOPE_HEIGHT);  // with a gray line
+            g.setColor(Color.BLACK);                                            // draw stuff in black now
+            g.drawLine(currentXPos-1, (SCOPE_HEIGHT/2+SCOPE_OFFSET), currentXPos+1, (SCOPE_HEIGHT/2+SCOPE_OFFSET)); // redraw center line
+            g.drawLine(currentXPos, (SCOPE_HEIGHT/2+SCOPE_OFFSET-formerYPos), currentXPos, (SCOPE_HEIGHT/2+SCOPE_OFFSET-currentYPos));
+        }
         
     }  
 }

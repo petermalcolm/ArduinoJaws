@@ -1,13 +1,17 @@
 // for painting the screen
 import javax.swing.SwingUtilities;
 import javax.swing.JFrame;
-// for the Canvas
-import java.awt.*;
-import java.awt.image.BufferStrategy;
-import javax.swing.Timer;
-// for the Chrono's event handling
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
+import javax.swing.JPanel;
+import javax.swing.BorderFactory;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+// for event handling
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseMotionAdapter;
 // for the security stuff to access RXTX
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -39,25 +43,15 @@ public class Arduscoplet implements SerialPortEventListener{
                     "COM9"
                     };
     /** Milliseconds to block while waiting for port open */
-    private static final int TIME_OUT   = 2000;    
+    private static final int TIME_OUT = 2000;    
 
-    private static final int DATA_RATE  = 115200;  // Peter Malcolm: data rate for oscilloscope (PM)
-
-    // the height of the oscilloscope
-    public static final int SCOPE_HEIGHT = 256;
-
-    // used elsewhere to determine width of oscilloscope
-    // public static final int SCOPE_WIDTH = 1280;
-    public static final int SCOPE_WIDTH = 1200;
-
-    public byte[] values = new byte[SCOPE_WIDTH];
-
-    private int currentPosition = 0;
+    private static final int DATA_RATE = 115200;  // Peter Malcolm: data rate for oscilloscope (PM)
     
-    private ArduFrame myAFrame    = null;
-    private InputStream in        = null;
-    private OutputStream out      = null;
-    private SerialPort serialPort = null;
+    private JFrame f = null;
+    private MyPanel p = null;
+    private InputStream in = null;
+    private OutputStream out = null;
+    private SerialPort serialPort;
     
     
     //////////////////////////////////////////////////////////////////////////////
@@ -118,22 +112,16 @@ public class Arduscoplet implements SerialPortEventListener{
         });
     }
 
-     private static void setup() {
+    private static void setup() {
         System.out.println("Created GUI on EDT? " + SwingUtilities.isEventDispatchThread());
         Arduscoplet a = new Arduscoplet();
-
-        // set up empty array of values:
-        for(int i = 0; i < SCOPE_WIDTH; i++) {
-            a.values[i] = 0;
-        }
-
-        a.myAFrame = new ArduFrame(a);                              // call constructor of LocalFrame
         
-        
-//        a.f = new JFrame("Arduino Oscilloscope, by MakeToLearn");
-//        a.f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
-//        a.f.pack();
-//        a.f.setVisible(true);
+        a.f = new JFrame("Arduino Oscilloscope, by MakeToLearn");
+        a.p = new MyPanel();
+        a.f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+        a.f.add(a.p);
+        a.f.pack();
+        a.f.setVisible(true);
 
         a.serialPort = a.openPort("oscilloscope",                               
                                   "COM3",DATA_RATE,
@@ -143,7 +131,7 @@ public class Arduscoplet implements SerialPortEventListener{
                                   a.TIME_OUT);
         if(null==a.serialPort){                                                 // failed to find device
             System.out.println("Error: Could not find attached Arduino");
-            // a.p.showMessage("Could not find attached Arduino");
+            a.p.showMessage("Could not find attached Arduino");
         } else {                                                                // success.  device found
             try {
                 a.in = a.serialPort.getInputStream();
@@ -193,17 +181,13 @@ public class Arduscoplet implements SerialPortEventListener{
                     // Displayed results are codepage dependent
                     // System.out.print(new String(chunk)); //  print this (PM)
 
-                    // System.out.print(Integer.toHexString(0xFF & chunk[0])); //  print this (PM) - stupid mistake, was 0xFFFF
-                    // System.out.print(" ");                                  //  print this (PM)
+                    System.out.print(Integer.toHexString(0xFF & chunk[0])); //  print this (PM) - stupid mistake, was 0xFFFF
+                    System.out.print(" ");                                  //  print this (PM)
 
-                    for(int i = 0; i < available; i++) {
-                        values[currentPosition] = chunk[i];         // put the data in the array
-                        currentPosition++;                              // increment the pointer
-                        if(currentPosition >= SCOPE_WIDTH) {            // wrap if necessary
-                            currentPosition = 0;
-                        }
-                    }
-                    
+                    // p.showDataMessage(Integer.toHexString(0xFF & chunk[0])); // ANDing ruins the data (!?)
+                    // p.showDataMessage(Integer.toHexString(chunk[0]));
+                    p.setCurrentYPos((int)chunk[0]);
+                    p.quickRepaint();
 
             } catch (Exception e) {
                     System.err.println(e.toString());
@@ -217,127 +201,116 @@ public class Arduscoplet implements SerialPortEventListener{
     
 }
 
-class ArduFrame extends JFrame {
-    ArduFrame(Arduscoplet aScope) {
-        // frame description
-        super("Arduino Oscilloscope, by MakeToLearn");
-        // our Canvas
-        ArduCanvas canvas = new ArduCanvas(aScope);
-        add(canvas, BorderLayout.CENTER);
-        // set it's size and make it visible
-        setSize(aScope.SCOPE_WIDTH, aScope.SCOPE_HEIGHT);
-        setVisible(true);		
-        // now that is visible we can tell it that we will use 2 buffers to do the repaint
-        // befor being able to do that, the Canvas as to be visible
-        canvas.createBufferStrategy(2);
-        canvas.computationDone = true;
+class MyPanel extends JPanel {
+
+    private int squareX = 50;
+    private int squareY = 50;
+    private int squareW = 20;
+    private int squareH = 20;
+    private String message = "";
+    private String dataMessage = "";
+    private Color currentColor = Color.BLACK;
+    
+    private Boolean isDataRepaint = false;
+    private int currentXPos = 0;
+    private int currentYPos = 0;
+    private int formerYPos = 0;
+    
+    private final int PANEL_WIDTH = 450;
+    private final int SCOPE_HEIGHT = 256;
+    private final int SCOPE_OFFSET = 80;
+    
+    public MyPanel() {
+
+        setBorder(BorderFactory.createLineBorder(Color.black));
+        // setBackground(Color.WHITE);
+        /*
+        addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                moveSquare(e.getX(),e.getY());
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            public void mouseDragged(MouseEvent e) {
+                moveSquare(e.getX(),e.getY());
+            }
+        });
+         * 
+         */
+        
     }
     
-}
-
-class ArduCanvas extends Canvas {
-	// back color LightYellow
-	Color backColor = new Color(255, 255, 150);
-	// my Swing timer
-	Timer timer;
-	// for the computation of the postion and the repaint
-	Dimension size;
+    public void setIsDataRepaint(Boolean newIsDataRepaint){
+        isDataRepaint = newIsDataRepaint;
+    }
     
-	// a boolean to synchronize computation and drawing
-	public boolean computationDone = false;
-        
-	// a boolean to ask the thread to stop
-	boolean threadStop = false;
-	
-        Arduscoplet myAScopeGrandparent = null;
-        
-        byte[] myCopyOfData = null;
-        
-	// CONSTRUCTOR: this is a Canvas but I wont't let the system when to repaint it I will do it myself
-	ArduCanvas(Arduscoplet aScope) {            
-		super();
-                // grab a pointer to the LocalScope that will be collecting the data
-                myAScopeGrandparent = aScope;
-                
-                myCopyOfData = new byte[aScope.SCOPE_WIDTH];
-                // initialize an entire array of zeroes:
-                for(int i = 0; i < aScope.SCOPE_WIDTH; i++) {
-                    myCopyOfData[i] = 0;
-                }
-                        
-		// so ignore System's paint request I will handle them
-		setIgnoreRepaint(true);
-
-		// build Chrono that will call me 
-		Chrono chrono = new Chrono(this);
-		// ask the chrono to calll me every 60 times a second so every 16 ms (set say 15 for the time it takes to paint)
-		timer = new Timer(16, chrono);
-		timer.start();
-	}
-	
-	// my own paint method that repaint off line and switch the displayed buffer
-	// according to the VBL
-	public synchronized void myRepaint() {
-		// computation a lot longer than expected (more than 15ms)... ignore it
-		if(!computationDone) {
-			return;
-		}
-                // System.out.println("size="+size);
-                int theWidth = myAScopeGrandparent.SCOPE_WIDTH;     // alias width
-                int theHeight = myAScopeGrandparent.SCOPE_HEIGHT;     // alias width
-
-		// ok doing the repaint on the not showed page
-		BufferStrategy strategy = getBufferStrategy();
-                // System.out.println(strategy);
-		Graphics graphics = strategy.getDrawGraphics();
-		// erase all what I had
-		graphics.setColor(backColor);	
-		graphics.fillRect(0, 0, theWidth, theHeight);
-                // draw the line across the center of the scope
-		graphics.setColor(Color.BLACK);	
-                graphics.drawLine(0, (theHeight/2), theWidth, (theHeight/2));
-                
-                
-                
-                // CODE HERE TO COPY OVER A LOCAL VERSION OF THE CURRENT LOCAL-CANVAS DATA STATE
-                for(int i = 0; i < theWidth; i++) { 
-                    myCopyOfData[i] = myAScopeGrandparent.values[i];
-                    // System.out.println(myCopyOfData[i]); // all zeroes...?
-                }
-                 
-                // CODE HERE TO REDRAW ALL SCOPE LINES
-                // RECOMMENDED:
-                // LOOP THRU WIDTH OF CANVAS -- this will be the same as the size of the data-array
-                // EACH TIME DRAWS A LINE ON GRAPHICS
-                for(int i = 0; i < theWidth; i++) {
-                    if(0==i){                                                   // wrap around at left side
-                        graphics.drawLine(i, theHeight/2-(int)myCopyOfData[theWidth-1], i, theHeight/2-(int)myCopyOfData[0]);
-                    } else {
-                        graphics.drawLine(i, theHeight/2-(int)myCopyOfData[i-1], i, theHeight/2-(int)myCopyOfData[i]);
-                    }
-                }
-                
-		if(graphics != null)
-			graphics.dispose();
-		// show next buffer
-		strategy.show();
-		// synchronized the blitter page shown
-		Toolkit.getDefaultToolkit().sync();
-		// ok I can be called again
-		// computationDone = false;
-	}
+    public void setCurrentYPos(int newCurrentYPos){
+        formerYPos = currentYPos;
+        currentYPos = newCurrentYPos;
+    }
     
-}
-
-class Chrono implements ActionListener {
-	ArduCanvas ac;
-	// constructor that receives the GameCanvas that we will repaint every 60 milliseconds
-	Chrono(ArduCanvas ac) {
-		this.ac = ac;
-	}
-	// calls the method to repaint the anim everytime I am called
-	public void actionPerformed(ActionEvent e) {
-		ac.myRepaint();
-	}
+    private void moveSquare(int x, int y) {
+        int OFFSET = 1;
+        if ((squareX!=x) || (squareY!=y)) {
+            repaint(squareX,squareY,squareW+OFFSET,squareH+OFFSET);
+            squareX=x;
+            squareY=y;
+            repaint(squareX,squareY,squareW+OFFSET,squareH+OFFSET);
+        } 
+    }
     
+
+    public Dimension getPreferredSize() {
+        return new Dimension(PANEL_WIDTH, SCOPE_HEIGHT+SCOPE_OFFSET);
+    }
+    
+    public void showMessage(String inMessage){
+        message = inMessage;
+        repaint();
+    }
+    
+    public synchronized void showDataMessage(String inMessage) {
+        if(dataMessage.length() < 50 ) {
+            currentColor = Color.GRAY;                                          // erase the original message
+            repaint();
+            
+            dataMessage = ": " + inMessage + dataMessage;                       // update and draw new message
+//          dataMessage = ": " + inMessage.length() + dataMessage;            // this demonstrated that only one character is being sent...            
+            currentColor = Color.BLACK;
+            repaint();
+        }
+    }
+    
+    public void quickRepaint(){
+        isDataRepaint = true;
+        repaint(currentXPos, SCOPE_OFFSET, currentXPos, SCOPE_OFFSET+SCOPE_HEIGHT);
+        // repaint();
+        currentXPos++;
+        if(currentXPos > PANEL_WIDTH) {                                         // wrap to far-left again
+            currentXPos = 0;
+        }
+             
+    }
+    
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if(!isDataRepaint) {                                                    // initially, this is *not* a repaint
+            g.drawString("Arduino Oscilloscope, by MakeToLearn",10,20);
+            g.drawString(message, 10, 38);
+            g.drawString(dataMessage, 10, 56);
+            // g.setColor(Color.RED);
+            // g.fillRect(squareX,squareY,squareW,squareH);
+            g.setColor(Color.BLACK);
+            //g.drawRect(squareX,squareY,squareW,squareH);
+            g.drawLine(0, (SCOPE_HEIGHT/2+SCOPE_OFFSET), PANEL_WIDTH, (SCOPE_HEIGHT/2+SCOPE_OFFSET));
+        } else {                                                                // now this *is* a repaint
+            g.setColor(Color.WHITE);                                             // wash out the previous data ...
+            // g.drawLine(currentXPos, SCOPE_OFFSET, currentXPos, SCOPE_OFFSET+SCOPE_HEIGHT);  // with a gray line
+            g.setColor(Color.BLACK);                                            // draw stuff in black now
+            g.drawLine(currentXPos-1, (SCOPE_HEIGHT/2+SCOPE_OFFSET), currentXPos+1, (SCOPE_HEIGHT/2+SCOPE_OFFSET)); // redraw center line
+            g.drawLine(currentXPos, (SCOPE_HEIGHT/2+SCOPE_OFFSET-formerYPos), currentXPos, (SCOPE_HEIGHT/2+SCOPE_OFFSET-currentYPos));
+        }
+        
+    }  
 }

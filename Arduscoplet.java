@@ -214,6 +214,16 @@ public class Arduscoplet implements SerialPortEventListener{
         // Ignore all the other eventTypes, but you should consider the other ones.
         
     }
+	/**
+	 * This should be called when you stop using the port.
+	 * This will prevent port locking on platforms like Linux.
+	 */
+	public synchronized void close() {
+		if (serialPort != null) {
+			serialPort.removeEventListener();
+			serialPort.close();
+		}
+	}
     
 }
 

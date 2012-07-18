@@ -231,6 +231,8 @@ class ArduFrame extends JFrame {
         // befor being able to do that, the Canvas as to be visible
         canvas.createBufferStrategy(2);
         canvas.computationDone = true;
+        
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
     
 }

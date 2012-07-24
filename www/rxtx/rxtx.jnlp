@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp codebase="http://people.virginia.edu/~pm4fr/jnlp_arduino/rxtx/"
+          href="rxtx.jnlp">
+  <information>
+        <title>RXTX</title>
+        <vendor>ajmas</vendor>
+        <homepage href="http://www.rxtx.org"/>
+        <description>Java API for serial port communication</description>
+        <description kind="short">Java API for serial port communication.</description>
+        <offline-allowed/>
+  </information>
+  <security>
+          <all-permissions/>
+  </security>
+        <resources>
+          <jar href="RXTXcomm.jar" />
+        </resources>
+        <resources os="Windows" arch="x86">
+          <nativelib href="rxtx-comm-natives-windows-i586.jar" />
+        </resources>
+        <resources os="Windows" arch="x64">
+          <nativelib href="rxtx-comm-natives-windows-64.jar" />
+        </resources>
+        <resources os="Linux" arch="i686">
+          <nativelib href="rxtx-comm-natives-linux-i686-32.jar" />
+        </resources>    
+        <resources os="Linux" arch="i386">
+          <nativelib href="rxtx-comm-natives-linux-i686-32.jar" />
+        </resources>
+        <resources os="Linux" arch="x86">
+          <nativelib href="rxtx-comm-natives-linux-i686-32.jar" />
+        </resources>
+        <resources os="Mac OS X" >
+          <nativelib href="rxtx-comm-natives-macosx-universal.jar" />
+        </resources>
+  <component-desc />
+</jnlp>

@@ -1,3 +1,22 @@
-This project allows the Arduino to communicate with a Java application launched via the web using JNLP (aka JaWS, or Java Web Start).  It uses the RxTx library. Thanks to the folks at rxtx.qbang.org for providing this library.
+This project allows the Arduino to communicate with a Java application launched via the web using JNLP (aka JaWS, or Java Web Start).  
+It uses the RxTx library. Thanks to the folks at rxtx.qbang.org for providing this library.
 
+The output on the screen is rudimentary oscilloscope, which uses a BufferStrategy to update as rapidly as possible.
 
+THIS CODE IS RELEASED, OF COURSE, WITHOUT ANY GUARANTEES.  PLEASE FEEL FREE TO REUSE WITH ATTRIBUTION, INCLUDING rxtx.qbang.org
+
+The jars have been self-signed.  If you make modifications to the Java code, you can
+re-sign your own jar with the following lines of code:
+
+> javac -cp RXTXcomm.jar Arduscoplet.java                  # compile
+> jar cvf Arduscoplet.jar Arduscoplet.class                # jar-ify
+> jarsigner Arduscoplet.jar <somekey>                      # sign
+
+You must rename the following file:
+  www/arduscoplet_example.jnlp
+   to
+  www/arduscoplet.jnlp
+and adjust the path to match the absolute URL where you will post this
+
+Code in the Arduino directory will send samples read as analogue from pin 0
+and send them at 115200 baud, with 7 bits of precision (signed) 

@@ -130,10 +130,6 @@ public class Arduscoplet implements SerialPortEventListener{
         a.myAFrame = new ArduFrame(a);                              // call constructor of LocalFrame
         
         
-//        a.f = new JFrame("Arduino Oscilloscope, by MakeToLearn");
-//        a.f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
-//        a.f.pack();
-//        a.f.setVisible(true);
 
         a.serialPort = a.openPort("oscilloscope",                               
                                   "COM3",DATA_RATE,

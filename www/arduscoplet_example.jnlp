@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp codebase="http://your-path-to-www"
+          href="arduscoplet.jnlp">
+  <information>
+        <title>Arduino Oscilloscope Applet</title>
+        <vendor>Curry School of Education, MakeToLearn</vendor>
+        <homepage href="http://maketolearn.org/"/>
+        <description>Program displaying data from an Arduino as an oscilloscope</description>
+        <description kind="short">Displays Arduino oscilloscope data</description>
+        <offline-allowed/>
+  </information>
+  <security>
+          <all-permissions/>
+  </security>
+        <resources>
+          <j2se href="http://java.sun.com/products/autodl/j2se" version="1.5+"/>
+          <jar href="Arduscoplet.jar" main="true"/>
+          <extension name="rxtx" href="http://your-path-to-www/rxtx/rxtx.jnlp" />
+        </resources>
+
+  <application-desc main-class="Arduscoplet"/>
+</jnlp>

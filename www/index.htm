@@ -1,0 +1,39 @@
+<html>
+ <head>
+  <title> JNLP testing...
+  </title>
+ </head>
+
+ <body>
+  Click 
+  <a href="arduscoplet.jnlp">this jnlp link</a>
+  to launch a JNLP to talk to the Arduino.
+  <br />
+  Or ... admire this JNLP Applet:
+
+ <!-- nice example courtesy of Andrew Thompson on stackoverflow.com 
+ <applet id="appletToTest" width=500 height=500 code="com.sample.SampleApplet" archive="JavaApplication6.jar, lib/lib1.jar, lib/lib2.jar">
+   <param name="jnlp_href" value="launch.jnlp">
+ </applet>
+
+You can get a javascript! handle to the applet like this: var parentAPPLET = document.getElementById("appletToTest");
+
+Now, whatever method you have in your applet, it better return String or a primitive value, but even if it doesn't you may operate on it assuming you know its methods. Continuing my example from above, if in your applet you have a function defined like this:
+
+public String returnSomething(){ return "bla"; }
+
+Then you can call it with your javascript like this:
+
+var parentAPPLET = document.getElementById("appletToTest");
+alert (parentAPPLET.returnSomething()); 
+ -->
+  
+<!-- applet code = 'Arduscoplet.class' 
+        width = 1200 
+        height = 256>
+    <param name="jnlp_href" value="Arduscoplet.jnlp" />
+</applet -->
+
+ </body>
+ 
+</html>
